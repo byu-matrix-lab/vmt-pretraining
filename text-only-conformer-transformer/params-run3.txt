@@ -1,0 +1,27 @@
+RANDOM_SEED = 42
+
+MODEL_DIR = '../../compute/models/text-only/run3/'
+
+# Dataloader parameters
+DATA_DIR = '../../compute/data/'
+MAX_VIDEO_LEN = 300
+MAX_TEXT_LEN = 300
+TOKEN_DIR = '../../compute/data/tokenizing/'
+MAD_FILES = ['filtered_comet.txt']
+VATEX_TRAIN_FILES = ['vatex_training_v1.0.json']
+VATEX_VAL_FILES = ['new_vatex_validation.json']
+
+# Model parameters
+EPOCHS = 5000
+VALIDATION_EPOCHS = 10
+SAVE_EVERY = 10
+EARLY_STOPPING = 5
+
+SOURCE_VOCAB_SIZE = 16000
+TARGET_VOCAB_SIZE = 8000
+BATCH_SIZE = 32
+NUMBER_OF_LAYERS = 8
+VIDEO_EMB_SIZE=1024 # 768 for MAD, 1024 for VATEX
+LEARNING_RATE = 1e-4
+SMOOTHING = 0.125
+

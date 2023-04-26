@@ -30,7 +30,8 @@ MAX_TEXT_LEN = 300
 TOKEN_DIR = '../../compute/data/tokenizing/'
 # MAD_FILES = ['filtered_comet.txt']
 # VATEX_TRAIN_FILES = ['vatex_training_v1.0.json']
-VATEX_VAL_FILES = ['new_vatex_validation.json']
+VATEX_VAL_FILES = ['vatex_validation_v1.0.json']
+# VATEX_VAL_FILES = ['new_vatex_validation.json']
 # VATEX_TEST_FILES = ['new_vatex_test.json']
 VATEX_TEST_FILES = ['mask_vatex_test.json']
 
@@ -136,7 +137,7 @@ class VaTeXDataset(Dataset):
   def __len__(self):
     return len(self.data)
 
-dataloader = DataLoader(VaTeXDataset(VATEX_TEST_FILES, train=False), batch_size=BATCH_SIZE, collate_fn=pad_to_longest, shuffle=True) # remove shuffle
+dataloader = DataLoader(VaTeXDataset(VATEX_VAL_FILES, train=False), batch_size=BATCH_SIZE, collate_fn=pad_to_longest, shuffle=True) # remove shuffle
 # test_dataloader = DataLoader(VaTeXDataset(VATEX_TEST_FILES, train=False), batch_size=BATCH_SIZE, collate_fn=pad_to_longest, shuffle=True) # remove shuffle
 
 print("Amount of data: ", len(dataloader))

@@ -142,7 +142,7 @@ dataloader = DataLoader(VaTeXDataset(VATEX_TEST_FILES, train=False), batch_size=
 
 print("Amount of data: ", len(dataloader))
 
-model = TransformerModel(SOURCE_VOCAB_SIZE, TARGET_VOCAB_SIZE, d_model=512, N=NUMBER_OF_LAYERS, video_emb_size=VIDEO_EMB_SIZE)
+model = TransformerModel(SOURCE_VOCAB_SIZE, TARGET_VOCAB_SIZE, d_model=256, N=NUMBER_OF_LAYERS, video_emb_size=VIDEO_EMB_SIZE)
 model.load_state_dict(torch.load(MODEL_DIR + MODEL_SAVE, map_location=device))
 model = model.to(device)
 

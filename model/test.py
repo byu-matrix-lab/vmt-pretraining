@@ -44,7 +44,11 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-outputs = model(input_ids=torch.tensor([[1,2,3]]), video_input=torch.tensor([[[1,2,3],[4,5,6],[4,5,6]]]).float(), decoder_input_ids=torch.tensor([[1,10,11]]))
+src = torch.tensor([[1,2,3]])
+video = torch.tensor([[[1,2,3],[4,5,6],[4,5,6]]]).float()
+tgt = torch.tensor([[1,10,11]])
 
+outputs = model(input_ids=src, video_input=video, decoder_input_ids=tgt)
 
+print(model.generate(input_ids=src, max_length=10))
 # look for pd numbers

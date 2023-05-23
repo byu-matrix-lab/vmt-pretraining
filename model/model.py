@@ -36,6 +36,8 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 
+from dataclasses import dataclass
+
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import (
     BaseModelOutput,
@@ -47,6 +49,16 @@ from transformers.modeling_outputs import (
     Seq2SeqSequenceClassifierOutput,
 )
 from transformers.modeling_utils import PreTrainedModel
+
+
+@dataclass
+class BaseMultimodalModelOutput(BaseModelOutput):
+    last_hidden_state: torch.FloatTensor = None
+    hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    attentions: Optional[Tuple[torch.FloatTensor]] = None
+    video_last_hidden_state: torch.FloatTensor = None
+    video_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    video_attentions: Optional[Tuple[torch.FloatTensor]] = None
 
 
 logger = logging.get_logger(__name__)
@@ -536,20 +548,6 @@ class BartSuperEncoder(BartPretrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-    # def get_input_embeddings(self):
-    #     return self.shared
-
-    # def set_input_embeddings(self, value):
-    #     self.shared = value
-    #     self.encoder.embed_tokens = self.shared
-    #     self.decoder.embed_tokens = self.shared
-
-    # def get_encoder(self):
-    #     return self.encoder
-
-    # def get_decoder(self):
-    #     return self.decoder
-
     def forward(
         self,
         input_ids: torch.LongTensor = None,
@@ -573,28 +571,50 @@ class BartSuperEncoder(BartPretrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if encoder_outputs is None:
-            encoder_outputs = self.encoder(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                head_mask=head_mask,
-                inputs_embeds=inputs_embeds,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            sub = self.video_encoder(
-                inputs_embeds=video_input,
-                attention_mask=video_attention_mask,
-                head_mask=head_mask,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            print(encoder_outputs)
-            print(sub)
-        # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
-        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
-            encoder_outputs = BaseModelOutput(
+
+            if return_dict:
+                encoder_outputs = BaseMultimodalModelOutput()
+
+            if input_ids is not None or inputs_embeds is not None:
+                text_encoder_outputs = self.encoder(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    head_mask=head_mask,
+                    inputs_embeds=inputs_embeds,
+                    output_attentions=output_attentions,
+                    output_hidden_states=output_hidden_states,
+                    return_dict=return_dict,
+                )
+
+                if return_dict:
+                    encoder_outputs.last_hidden_state=text_encoder_outputs.last_hidden_state
+                    encoder_outputs.hidden_states=text_encoder_outputs.hidden_states
+                    encoder_outputs.attentions=text_encoder_outputs.attentions
+                else:
+                    encoder_outputs = text_encoder_outputs
+
+            if video_input is not None:
+                video_encoder_outputs = self.video_encoder(
+                    inputs_embeds=video_input,
+                    attention_mask=video_attention_mask,
+                    head_mask=head_mask,
+                    output_attentions=output_attentions,
+                    output_hidden_states=output_hidden_states,
+                    return_dict=return_dict,
+                )
+                
+                if encoder_outputs is None:
+                    encoder_outputs = video_encoder_outputs
+                elif return_dict:
+                    encoder_outputs.video_last_hidden_state=video_encoder_outputs.last_hidden_state
+                    encoder_outputs.video_hidden_states=video_encoder_outputs.hidden_states
+                    encoder_outputs.video_attentions=video_encoder_outputs.attentions
+                else:
+                    encoder_outputs += video_encoder_outputs
+
+        # If the user passed a tuple for encoder_outputs, we wrap it in a BaseMultimodalModelOutput when return_dict=True
+        elif return_dict and not isinstance(encoder_outputs, BaseMultimodalModelOutput):
+            encoder_outputs = BaseMultimodalModelOutput(
                 last_hidden_state=encoder_outputs[0],
                 hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
@@ -603,19 +623,7 @@ class BartSuperEncoder(BartPretrainedModel):
                 video_attentions=encoder_outputs[5] if len(encoder_outputs) > 5 else None,
             )
 
-        if not return_dict:
-            return decoder_outputs + encoder_outputs
-
-        return Seq2SeqModelOutput(
-            last_hidden_state=decoder_outputs.last_hidden_state,
-            past_key_values=decoder_outputs.past_key_values,
-            decoder_hidden_states=decoder_outputs.hidden_states,
-            decoder_attentions=decoder_outputs.attentions,
-            cross_attentions=decoder_outputs.cross_attentions,
-            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
-            encoder_hidden_states=encoder_outputs.hidden_states,
-            encoder_attentions=encoder_outputs.attentions,
-        )
+        return encoder_outputs
 
 class BartEncoder(BartPretrainedModel):
     """
@@ -869,6 +877,8 @@ class BartDecoder(BartPretrainedModel):
         attention_mask: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.FloatTensor] = None,
         encoder_attention_mask: Optional[torch.LongTensor] = None,
+        video_hidden_states: Optional[torch.FloatTensor] = None,
+        video_attention_mask: Optional[torch.LongTensor] = None,
         head_mask: Optional[torch.Tensor] = None,
         cross_attn_head_mask: Optional[torch.Tensor] = None,
         past_key_values: Optional[List[torch.FloatTensor]] = None,
@@ -1165,13 +1175,13 @@ class BartModel(BartPretrainedModel):
                 output_hidden_states=output_hidden_states,
                 return_dict=return_dict,
             )
-        # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
-        elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
-            encoder_outputs = BaseModelOutput(
+        # If the user passed a tuple for encoder_outputs, we wrap it in a BaseMultimodalModelOutput when return_dict=True
+        elif return_dict and not isinstance(encoder_outputs, BaseMultimodalModelOutput):
+            encoder_outputs = BaseMultimodalModelOutput(
                 last_hidden_state=encoder_outputs[0],
                 hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
-                video_hidden_state=encoder_outputs[3] if len(encoder_outputs) > 3 else None,
+                video_last_hidden_state=encoder_outputs[3] if len(encoder_outputs) > 3 else None,
                 video_hidden_states=encoder_outputs[4] if len(encoder_outputs) > 4 else None,
                 video_attentions=encoder_outputs[5] if len(encoder_outputs) > 5 else None,
             )
@@ -1180,9 +1190,9 @@ class BartModel(BartPretrainedModel):
         decoder_outputs = self.decoder(
             input_ids=decoder_input_ids,
             attention_mask=decoder_attention_mask,
-            encoder_hidden_states=encoder_outputs[0],
+            encoder_hidden_states=encoder_outputs.last_hidden_state,
             encoder_attention_mask=attention_mask,
-            video_hidden_states=encoder_outputs[3] if len(encoder_outputs) > 3 else None,
+            video_hidden_states=encoder_outputs.video_last_hidden_state,
             video_attention_mask=video_attention_mask,
             head_mask=decoder_head_mask,
             cross_attn_head_mask=cross_attn_head_mask,

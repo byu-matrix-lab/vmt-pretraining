@@ -18,23 +18,15 @@
 import copy
 import math
 import random
-import warnings
 from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.utils.checkpoint
 from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss
 
 from transformers import BartConfig
-from transformers.utils import (
-    add_code_sample_docstrings,
-    add_end_docstrings,
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
-    logging,
-    replace_return_docstrings,
-)
+from transformers.utils import logging
 
 from dataclasses import dataclass
 
@@ -42,11 +34,8 @@ from transformers.activations import ACT2FN
 from transformers.modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
-    CausalLMOutputWithCrossAttentions,
     Seq2SeqLMOutput,
-    Seq2SeqModelOutput,
-    Seq2SeqQuestionAnsweringModelOutput,
-    Seq2SeqSequenceClassifierOutput,
+    Seq2SeqModelOutput
 )
 from transformers.modeling_utils import PreTrainedModel
 
@@ -59,6 +48,21 @@ class BaseMultimodalModelOutput(BaseModelOutput):
     video_last_hidden_state: torch.FloatTensor = None
     video_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     video_attentions: Optional[Tuple[torch.FloatTensor]] = None
+
+
+@dataclass
+class Seq2SeqMultimodalModelOutput(Seq2SeqModelOutput):
+    last_hidden_state: torch.FloatTensor = None
+    past_key_values: Optional[Tuple[torch.FloatTensor]] = None
+    decoder_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    decoder_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    cross_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    encoder_last_hidden_state: torch.FloatTensor = None
+    encoder_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    encoder_attentions: Optional[Tuple[torch.FloatTensor]] = None
+    encoder_video_last_hidden_state: torch.FloatTensor = None
+    encoder_video_hidden_states: Optional[Tuple[torch.FloatTensor]] = None
+    encoder_video_attentions: Optional[Tuple[torch.FloatTensor]] = None
 
 
 logger = logging.get_logger(__name__)
@@ -561,7 +565,7 @@ class BartSuperEncoder(BartPretrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, Seq2SeqModelOutput]:
+    ) -> Union[Tuple, Seq2SeqMultimodalModelOutput]:
     
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1141,7 +1145,7 @@ class BartModel(BartPretrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, Seq2SeqModelOutput]:
+    ) -> Union[Tuple, Seq2SeqMultimodalModelOutput]:
         # different to other models, Bart automatically creates decoder_input_ids from
         # input_ids if no decoder_input_ids are provided
         if decoder_input_ids is None and decoder_inputs_embeds is None:
@@ -1207,7 +1211,7 @@ class BartModel(BartPretrainedModel):
         if not return_dict:
             return decoder_outputs + encoder_outputs
 
-        return Seq2SeqModelOutput(
+        return Seq2SeqMultimodalModelOutput(
             last_hidden_state=decoder_outputs.last_hidden_state,
             past_key_values=decoder_outputs.past_key_values,
             decoder_hidden_states=decoder_outputs.hidden_states,
@@ -1216,6 +1220,9 @@ class BartModel(BartPretrainedModel):
             encoder_last_hidden_state=encoder_outputs.last_hidden_state,
             encoder_hidden_states=encoder_outputs.hidden_states,
             encoder_attentions=encoder_outputs.attentions,
+            encoder_video_last_hidden_state=encoder_outputs.last_hidden_state,
+            encoder_video_hidden_states=encoder_outputs.hidden_states,
+            encoder_video_attentions=encoder_outputs.attentions,
         )
 
 

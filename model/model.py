@@ -386,17 +386,18 @@ class BartDecoderLayer(nn.Module):
         super().__init__()
         self.embed_dim = config.d_model
 
+        self.dropout = config.dropout
+        self.activation_fn = ACT2FN[config.activation_function]
+        self.activation_dropout = config.activation_dropout
+        
         self.self_attn = BartAttention(
             embed_dim=self.embed_dim,
             num_heads=config.decoder_attention_heads,
             dropout=config.attention_dropout,
             is_decoder=True,
         )
-        self.dropout = config.dropout
-        self.activation_fn = ACT2FN[config.activation_function]
-        self.activation_dropout = config.activation_dropout
-
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+
         self.encoder_attn = BartAttention(
             self.embed_dim,
             config.decoder_attention_heads,
@@ -404,6 +405,15 @@ class BartDecoderLayer(nn.Module):
             is_decoder=True,
         )
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+
+        self.video_attn = BartAttention(
+            self.embed_dim,
+            config.decoder_attention_heads,
+            dropout=config.attention_dropout,
+            is_decoder=True,
+        )
+        self.video_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+
         self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
@@ -414,8 +424,11 @@ class BartDecoderLayer(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         encoder_hidden_states: Optional[torch.Tensor] = None,
         encoder_attention_mask: Optional[torch.Tensor] = None,
+        video_hidden_states: Optional[torch.Tensor] = None,
+        video_attention_mask: Optional[torch.Tensor] = None,
         layer_head_mask: Optional[torch.Tensor] = None,
         cross_attn_layer_head_mask: Optional[torch.Tensor] = None,
+        video_attn_layer_head_mask: Optional[torch.Tensor] = None, # TODO: add support for this later
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = True,
@@ -461,8 +474,8 @@ class BartDecoderLayer(nn.Module):
         if encoder_hidden_states is not None:
             residual = hidden_states
 
-            # cross_attn cached key/values tuple is at positions 3,4 of present_key_value tuple
-            cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
+            # cross_attn cached key/values tuple is at indices 2,3 of present_key_value tuple
+            cross_attn_past_key_value = past_key_value[2:4] if past_key_value is not None else None
             hidden_states, cross_attn_weights, cross_attn_present_key_value = self.encoder_attn(
                 hidden_states=hidden_states,
                 key_value_states=encoder_hidden_states,
@@ -475,8 +488,36 @@ class BartDecoderLayer(nn.Module):
             hidden_states = residual + hidden_states
             hidden_states = self.encoder_attn_layer_norm(hidden_states)
 
-            # add cross-attn to positions 3,4 of present_key_value tuple
-            present_key_value = present_key_value + cross_attn_present_key_value
+            # add cross-attn to indices 2,3 of present_key_value tuple
+            present_key_value += cross_attn_present_key_value
+        else:
+            present_key_value += (None, None) # TODO: consider nesting tuples instead of concatenating them
+
+
+        # Video-Attention Block
+        video_attn_present_key_value = None
+        video_attn_weights = None
+        if video_hidden_states is not None:
+            residual = hidden_states
+
+            # cross_attn cached key/values tuple is at indices 4,5 of present_key_value tuple
+            video_attn_past_key_value = past_key_value[4:6] if past_key_value is not None else None
+            hidden_states, video_attn_weights, video_attn_present_key_value = self.video_attn(
+                hidden_states=hidden_states,
+                key_value_states=video_hidden_states,
+                attention_mask=video_attention_mask,
+                layer_head_mask=video_attn_layer_head_mask,
+                past_key_value=video_attn_past_key_value,
+                output_attentions=output_attentions,
+            )
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = residual + hidden_states
+            hidden_states = self.video_attn_layer_norm(hidden_states)
+
+            # add cross-attn to indices 4,5 of present_key_value tuple
+            present_key_value += video_attn_present_key_value
+        else:
+            present_key_value += (None, None) # TODO: consider nesting tuples instead of concatenating them
 
         # Fully Connected
         residual = hidden_states
@@ -490,7 +531,7 @@ class BartDecoderLayer(nn.Module):
         outputs = (hidden_states,)
 
         if output_attentions:
-            outputs += (self_attn_weights, cross_attn_weights)
+            outputs += (self_attn_weights, cross_attn_weights) # TODO: add video attention weights
 
         if use_cache:
             outputs += (present_key_value,)
@@ -992,6 +1033,11 @@ class BartDecoder(BartPretrainedModel):
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
             encoder_attention_mask = _expand_mask(encoder_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
 
+        # expand video attention mask
+        if video_hidden_states is not None and video_attention_mask is not None:
+            # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
+            video_attention_mask = _expand_mask(video_attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1])
+
         # embed positions
         positions = self.embed_positions(input, past_key_values_length)
         positions = positions.to(inputs_embeds.device)
@@ -1048,6 +1094,8 @@ class BartDecoder(BartPretrainedModel):
                     attention_mask,
                     encoder_hidden_states,
                     encoder_attention_mask,
+                    video_hidden_states,
+                    video_attention_mask,
                     head_mask[idx] if head_mask is not None else None,
                     cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None,
                     None,
@@ -1058,6 +1106,8 @@ class BartDecoder(BartPretrainedModel):
                     attention_mask=attention_mask,
                     encoder_hidden_states=encoder_hidden_states,
                     encoder_attention_mask=encoder_attention_mask,
+                    video_hidden_states=video_hidden_states,
+                    video_attention_mask=video_attention_mask,
                     layer_head_mask=(head_mask[idx] if head_mask is not None else None),
                     cross_attn_layer_head_mask=(
                         cross_attn_head_mask[idx] if cross_attn_head_mask is not None else None

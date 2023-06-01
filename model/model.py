@@ -156,6 +156,7 @@ class BartLearnedPositionalEmbedding(nn.Embedding):
             past_key_values_length, past_key_values_length + seq_len, dtype=torch.long, device=self.weight.device
         ).expand(bsz, -1)
 
+        print(past_key_values_length, input_ids.size(), positions.max())
         return super().forward(positions + self.offset)
 
 

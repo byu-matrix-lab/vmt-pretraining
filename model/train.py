@@ -6,12 +6,18 @@ from dataset import pad_to_longest
 
 import math
 import copy
+import os
+
+device = torch.device('cuda:0' if 'CUDA_VISIBLE_DEVICES' in os.environ else 'cpu')
 
 def prep_model_inputs(include_video = True, **input_kwargs):
     if not include_video:
         if 'video_input' in input_kwargs: del input_kwargs['video_input']
         if 'video_attention_mask' in input_kwargs: del input_kwargs['video_attention_mask']
     return input_kwargs
+
+def to_device(tensors):
+    return [i.to(device) for i in tensors]
 
 def run_train(
     model,
@@ -23,7 +29,9 @@ def run_train(
     val_every = 10,
     early_stop = 10):
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=pad_to_longest, shuffle=True)
+    model = model.to(device)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=pad_to_longest, shuffle=False) # change to True
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=pad_to_longest)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
@@ -35,8 +43,10 @@ def run_train(
     for epoch in range(1, 10000):
 
         # train
+        model.train()
         train_bar = tqdm(train_dataloader)
-        for v, vm, s, sm, t, tm in train_bar:
+        for data in train_bar:
+            v, vm, s, sm, t, tm = to_device(data)
             
             model_inputs = prep_model_inputs(
                 include_video,
@@ -60,9 +70,12 @@ def run_train(
         if epoch % val_every == 0:
             total_loss = 0
             total_segs = 0
+            model.eval()
             with torch.no_grad():
                 val_bar = tqdm(val_dataloader)
-                for v, vm, s, sm, t, tm in val_bar:
+                for data in val_bar:
+                    v, vm, s, sm, t, tm = to_device(data)
+
                     # output = model.generate(input_ids=s, attention_mask=sm, video_input=v, video_attention_mask=vm, num_beams=5, min_length=0, max_length=100)
                     model_inputs = prep_model_inputs(
                         include_video,

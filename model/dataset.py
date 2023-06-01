@@ -18,7 +18,7 @@ EOS = 3
 RANDOM_SEED = 42
 
 # Dataloader parameters
-DATA_DIR = '../../data/sample_data/' # replace this
+DATA_DIR = '../../compute/data/'
 MAX_VIDEO_LEN = 300
 MAX_TEXT_LEN = 300
 MAD_FILES = ['filtered_comet.txt']
@@ -46,6 +46,9 @@ def pad_to_longest(batch):
   pad_len = max(vid_lens)
   vid_mask = generate_mask(pad_len, vid_lens)
   pad_videos = []
+  print(len(videos))
+  print(len(videos[0]))
+  print(len(videos[0][0]))
   emb_size = len(videos[0][0])
   for v in videos:
     v = v.tolist()
@@ -73,7 +76,7 @@ class MADDataset(Dataset):
   def __init__(self, files, tokenizer):
     files = [DATA_DIR + 'mad/' + f for f in files]
 
-    with h5py.File(DATA_DIR + '/mad/CLIP_L14_frames_features_5fps.h5', 'r') as all_movies:
+    with h5py.File(DATA_DIR + 'mad/CLIP_L14_frames_features_5fps.h5', 'r') as all_movies:
       movie_data = {}
       for key in tqdm(all_movies.keys(), desc = 'Loading movie features'):
         movie_data[key] = all_movies[key][:]
@@ -94,7 +97,10 @@ class MADDataset(Dataset):
           en = [tokenizer.bos_id()] + tokenizer.encode(en) + [tokenizer.eos_id()]
           zh = [tokenizer.bos_id()] + tokenizer.encode(zh) + [tokenizer.eos_id()]
 
-          self.data.append((movie_features, en, zh))
+          # filter out crazy long sentences
+
+          if 0 < len(movie_features) <= MAX_VIDEO_LEN and len(en) <= MAX_TEXT_LEN and len(zh) <= MAX_TEXT_LEN:
+            self.data.append((movie_features, en, zh))
 
   def __getitem__(self, i):
     return self.data[i]
@@ -132,9 +138,9 @@ class VaTeXDataset(Dataset):
           # if train:
           #   self.data.append((video_feats, pairs))
           # else:
-          for pair in pairs: # no random for test
-            self.data.append((video_feats, [pair]))
-          # self.data.append((video_feats, pairs[:1]))
+          for en, zh in pairs: # no random for test
+            if 0 < len(video_feats) <= MAX_VIDEO_LEN and len(en) <= MAX_TEXT_LEN and len(zh) <= MAX_TEXT_LEN:
+              self.data.append((video_feats, [(en, zh)]))
 
   def __getitem__(self, i):
     video, pairs = self.data[i]

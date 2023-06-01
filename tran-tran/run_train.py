@@ -1,13 +1,14 @@
 from transformers import BartConfig # extend this
-from model import BartForConditionalGeneration
-
 import torch
 import sentencepiece as spm
+import sys
+sys.path.append('../model')
 
+from model import BartForConditionalGeneration
 from dataset import VaTeXDataset, MADDataset
 from train import run_train
 
-tokenizer = spm.SentencePieceProcessor(model_file='../../data/tokenizing/en-and-zh.model')
+tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh.model')
 
 config = BartConfig(
                             vocab_size = tokenizer.vocab_size(),
@@ -20,7 +21,7 @@ config = BartConfig(
                             encoder_input_dim = 0, # do nothing
 
                             video_encoder_layers = 6,
-                            video_encoder_conformer = True,
+                            video_encoder_conformer = False,
                             video_encoder_input_dim = 768, # MAD
                             # video_encoder_input_dim = 1024, # VaTeX
 
@@ -46,10 +47,14 @@ config = BartConfig(
 model = BartForConditionalGeneration(config)
 
 # train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
-train_dataset = MADDataset(['filtered_comet.txt'], tokenizer)
+# val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
 
-run_train(model, tokenizer, train_dataset, train_dataset)
+train_dataset = MADDataset(['mad-train.txt'], tokenizer)
+val_dataset = MADDataset(['mad-val.txt'], tokenizer)
 
+run_train(model, tokenizer, train_dataset, val_dataset)
+
+torch.save(model.state_dict(), '../../compute/models/tran-tran/run1')
 
 
         

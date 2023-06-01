@@ -80,10 +80,10 @@ for epoch in range(1, 10000):
         # exit(0)
         break
     
-    if epoch % 100 == 0:
+    if epoch % 50 == 0:
         with torch.no_grad():
             for v, vm, s, sm, t, tm in train_dataloader:
-                output = model.generate(input_ids=s, video_input=v, num_beams=1, min_length=0, max_length=20)
+                output = model.generate(input_ids=s, video_input=v, num_beams=5, min_length=0, max_length=20)
                 for targ, pred in zip(t, output):
                     print(tokenizer.decode(targ.tolist()))
                     print(tokenizer.decode(pred.tolist()))

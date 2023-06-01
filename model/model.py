@@ -18,7 +18,7 @@
 import copy
 import math
 import random
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict, Any
 
 import torch
 import torch.utils.checkpoint
@@ -663,7 +663,7 @@ class BartSuperEncoder(BartPretrainedModel):
                 last_hidden_state=encoder_outputs[0],
                 hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
-                video_hidden_state=encoder_outputs[3] if len(encoder_outputs) > 3 else None,
+                video_last_hidden_state=encoder_outputs[3] if len(encoder_outputs) > 3 else None,
                 video_hidden_states=encoder_outputs[4] if len(encoder_outputs) > 4 else None,
                 video_attentions=encoder_outputs[5] if len(encoder_outputs) > 5 else None,
             )
@@ -1437,6 +1437,39 @@ class BartForConditionalGeneration(BartPretrainedModel):
 
     def prepare_decoder_input_ids_from_labels(self, labels: torch.Tensor):
         return shift_tokens_right(labels, self.config.pad_token_id, self.config.decoder_start_token_id)
+
+    @staticmethod
+    def _expand_inputs_for_generation(
+        input_ids: torch.LongTensor,
+        expand_size: int = 1,
+        is_encoder_decoder: bool = False,
+        attention_mask: Optional[torch.LongTensor] = None,
+        encoder_outputs: Optional[BaseMultimodalModelOutput] = None,
+        **model_kwargs,
+    ) -> Tuple[torch.LongTensor, Dict[str, Any]]:
+        expanded_return_idx = (
+            torch.arange(input_ids.shape[0]).view(-1, 1).repeat(1, expand_size).view(-1).to(input_ids.device)
+        )
+        input_ids = input_ids.index_select(0, expanded_return_idx)
+
+        if "token_type_ids" in model_kwargs:
+            token_type_ids = model_kwargs["token_type_ids"]
+            model_kwargs["token_type_ids"] = token_type_ids.index_select(0, expanded_return_idx)
+
+        if attention_mask is not None:
+            model_kwargs["attention_mask"] = attention_mask.index_select(0, expanded_return_idx)
+
+        if is_encoder_decoder:
+            if encoder_outputs is None:
+                raise ValueError("If `is_encoder_decoder` is True, make sure that `encoder_outputs` is defined.")
+            encoder_outputs["last_hidden_state"] = encoder_outputs.last_hidden_state.index_select(
+                0, expanded_return_idx.to(encoder_outputs.last_hidden_state.device)
+            )
+            encoder_outputs["video_last_hidden_state"] = encoder_outputs.video_last_hidden_state.index_select(
+                0, expanded_return_idx.to(encoder_outputs.video_last_hidden_state.device)
+            )
+            model_kwargs["encoder_outputs"] = encoder_outputs
+        return input_ids, model_kwargs
 
     @staticmethod
     def _reorder_cache(past_key_values, beam_idx):

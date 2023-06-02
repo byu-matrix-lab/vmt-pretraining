@@ -4,6 +4,8 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from dataset import pad_to_longest
 
+from nltk.translate.chrf_score import corpus_chrf
+
 import math
 import copy
 import os
@@ -25,18 +27,18 @@ def run_train(
     train_dataset,
     val_dataset,
     include_video = True,
-    batch_size = 10,
-    val_every = 10,
+    batch_size = 20,
+    val_every = 1,
     early_stop = 10):
 
     model = model.to(device)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=pad_to_longest, shuffle=False) # change to True
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=pad_to_longest, shuffle=True) # change to True
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=pad_to_longest)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
-    best_score = math.inf
+    best_score = 0
     best_model = None
     early_stop_c = 0
 
@@ -44,6 +46,8 @@ def run_train(
 
         # train
         model.train()
+        total_loss = 0
+        total_segs = 0
         train_bar = tqdm(train_dataloader)
         for data in train_bar:
             v, vm, s, sm, t, tm = to_device(data)
@@ -60,46 +64,54 @@ def run_train(
             outputs = model(**model_inputs)
 
             loss = outputs.loss
+            total_loss += loss.item()
+            total_segs += v.size(0) / batch_size
 
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
 
-            train_bar.set_description(f'Train Epoch: {epoch} Loss: {loss.item():.4f}')
+            train_bar.set_description(f'Train Epoch: {epoch} Cur Loss: {loss.item():.4f} Avg Loss: {total_loss/total_segs:.4f}')
         
         if epoch % val_every == 0:
             total_loss = 0
             total_segs = 0
             model.eval()
+            output_pair = None
             with torch.no_grad():
                 val_bar = tqdm(val_dataloader)
                 for data in val_bar:
                     v, vm, s, sm, t, tm = to_device(data)
 
-                    # output = model.generate(input_ids=s, attention_mask=sm, video_input=v, video_attention_mask=vm, num_beams=5, min_length=0, max_length=100)
+                    # total_loss += outputs.loss.item()
                     model_inputs = prep_model_inputs(
                         include_video,
                         input_ids=s,
                         attention_mask=sm,
                         video_input=v,
                         video_attention_mask=vm,
-                        labels=t,
-                        decoder_attention_mask=tm
+                        num_beams=5,
+                        min_length=0,
+                        max_length=200
                         )
-                    outputs = model(**model_inputs)
-                    total_loss += outputs.loss.item()
+                    outputs = model.generate(**model_inputs)
+                    outputs = tokenizer.decode(outputs.tolist())
+                    refs = tokenizer.decode(t.tolist())
+                    if output_pair is None: output_pair = (refs[0], outputs[0])
+                    total_loss += corpus_chrf(outputs, refs)
                     total_segs += s.shape[0]/batch_size
-                    val_bar.set_description(f'Val Epoch: {epoch} Loss: {total_loss/total_segs:.4f}')
+                    val_bar.set_description(f'Val Epoch: {epoch} Score: {total_loss/total_segs:.4f}')
+            print('Example translation:',*output_pair, sep=' -> ')
             cur_score = total_loss / total_segs
 
-            if cur_score < best_score:
+            if cur_score > best_score:
                 print(f'Saving model weights {cur_score:.4f} < {best_score:.4f}')
                 early_stop_c = 0
                 best_score = cur_score
                 best_model = copy.deepcopy(model.state_dict())
             else:
                 early_stop_c += 1
-                if early_stop_c >= early_stop:
+                if early_stop_c >= early_stop and best_score > 0:
                     print('Stopping after model failed to improve in',early_stop,'epochs')
                     break
 

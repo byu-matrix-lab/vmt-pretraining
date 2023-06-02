@@ -17,6 +17,4 @@ module load miniconda3
 source ~/.bashrc
 conda activate 601final
 
-nvidia-smi
-
-python3 run_train.py
+python3 run_inference.py

@@ -19,6 +19,7 @@ RANDOM_SEED = 42
 
 # Dataloader parameters
 DATA_DIR = '../../compute/data/'
+# DATA_DIR = '../../compute/sample_data/'
 MAX_VIDEO_LEN = 300
 MAX_TEXT_LEN = 300
 MAD_FILES = ['filtered_comet.txt']
@@ -46,9 +47,6 @@ def pad_to_longest(batch):
   pad_len = max(vid_lens)
   vid_mask = generate_mask(pad_len, vid_lens)
   pad_videos = []
-  print(len(videos))
-  print(len(videos[0]))
-  print(len(videos[0][0]))
   emb_size = len(videos[0][0])
   for v in videos:
     v = v.tolist()

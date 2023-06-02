@@ -6,7 +6,7 @@ sys.path.append('../model')
 
 from model import BartForConditionalGeneration
 from dataset import VaTeXDataset, MADDataset
-from train import run_train
+from inference import run_inference
 
 tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh.model')
 
@@ -46,18 +46,18 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
+model.load_state_dict(torch.load('../../compute/models/none-tran/run1'))
+
 # train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
 # val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
 
-# train_dataset = MADDataset(['filtered_comet.txt'], tokenizer)
-# val_dataset = train_dataset
+test_dataset = MADDataset(['mad-val.txt'], tokenizer)
 
-train_dataset = MADDataset(['mad-train.txt'], tokenizer)
-val_dataset = MADDataset(['mad-val.txt'], tokenizer)
+print(len(test_dataset))
 
-run_train(model, tokenizer, train_dataset, val_dataset)
+run_inference(model, tokenizer, test_dataset, include_video=False)
 
-torch.save(model.state_dict(), '../../compute/models/tran-tran/run2')
+# torch.save(model.state_dict(), '../../compute/models/none-tran/run1')
 
 
         

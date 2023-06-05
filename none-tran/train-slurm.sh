@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1   # number of processor cores (i.e. tasks)
 #SBATCH --nodes=1   # number of nodes
 #SBATCH --mem-per-cpu=200G   # RAM per CPU core
-#SBATCH -J "tran-tran"   # job name
+#SBATCH -J "none-tran"   # job name
 #SBATCH --gpus=1
 #SBATCH --qos=cs
 #SBATCH --partition=cs
@@ -16,7 +16,5 @@ export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
 module load miniconda3
 source ~/.bashrc
 conda activate 601final
-
-nvidia-smi
 
 python3 run_train.py

@@ -22,8 +22,8 @@ config = BartConfig(
 
                             video_encoder_layers = 6,
                             video_encoder_conformer = False,
-                            video_encoder_input_dim = 768, # MAD
-                            # video_encoder_input_dim = 1024, # VaTeX
+                            # video_encoder_input_dim = 768, # MAD
+                            video_encoder_input_dim = 1024, # VaTeX
 
                             decoder_layers = 6,
                             decoder_ffn_dim = 2048,
@@ -46,18 +46,15 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-# train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
-# val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
+train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
+val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
 
-# train_dataset = MADDataset(['filtered_comet.txt'], tokenizer)
-# val_dataset = train_dataset
-
-train_dataset = MADDataset(['mad-train.txt'], tokenizer)
-val_dataset = MADDataset(['mad-val.txt'], tokenizer)
+# train_dataset = MADDataset(['mad-train.txt'], tokenizer)
+# val_dataset = MADDataset(['mad-val.txt'], tokenizer)
 
 run_train(model, tokenizer, train_dataset, val_dataset)
 
-torch.save(model.state_dict(), '../../compute/models/tran-tran/run2')
+torch.save(model.state_dict(), '../../compute/models/tran-tran/vatex-only')
 
 
         

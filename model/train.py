@@ -29,14 +29,15 @@ def run_train(
     include_video = True,
     batch_size = 20,
     val_every = 1,
-    early_stop = 10):
+    early_stop = 10,
+    lr = 1e-4):
 
     model = model.to(device)
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=pad_to_longest, shuffle=True) # change to True
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=pad_to_longest)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     best_score = 0
     best_model = None
@@ -105,7 +106,7 @@ def run_train(
             cur_score = total_loss / total_segs
 
             if cur_score > best_score:
-                print(f'Saving model weights {cur_score:.4f} < {best_score:.4f}')
+                print(f'Saving model weights {cur_score:.4f} > {best_score:.4f}')
                 early_stop_c = 0
                 best_score = cur_score
                 best_model = copy.deepcopy(model.state_dict())

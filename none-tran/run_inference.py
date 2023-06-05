@@ -22,8 +22,8 @@ config = BartConfig(
 
                             video_encoder_layers = 6,
                             video_encoder_conformer = False,
-                            video_encoder_input_dim = 768, # MAD
-                            # video_encoder_input_dim = 1024, # VaTeX
+                            # video_encoder_input_dim = 768, # MAD
+                            video_encoder_input_dim = 1024, # VaTeX
 
                             decoder_layers = 6,
                             decoder_ffn_dim = 2048,
@@ -46,18 +46,15 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-model.load_state_dict(torch.load('../../compute/models/none-tran/run1'))
+model.load_state_dict(torch.load('../../compute/models/none-tran/vatex-finetune',map_location=torch.device('cpu')))
 
-# train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
-# val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
+test_dataset = VaTeXDataset(['new_vatex_test.json'], tokenizer)
 
-test_dataset = MADDataset(['mad-val.txt'], tokenizer)
+run_inference(
+    model,
+    tokenizer,
+    test_dataset,
+    include_video=False,
+    save_path = '../../compute/data/outputs/none-tran/vatex-finetune/'
+)
 
-print(len(test_dataset))
-
-run_inference(model, tokenizer, test_dataset, include_video=False)
-
-# torch.save(model.state_dict(), '../../compute/models/none-tran/run1')
-
-
-        

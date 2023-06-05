@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1   # number of processor cores (i.e. tasks)
 #SBATCH --nodes=1   # number of nodes
 #SBATCH --mem-per-cpu=200G   # RAM per CPU core
-#SBATCH -J "tran-tran"   # job name
+#SBATCH -J "none-tran"   # job name
 #SBATCH --gpus=1
 #SBATCH --qos=cs
 #SBATCH --partition=cs
@@ -17,4 +17,4 @@ module load miniconda3
 source ~/.bashrc
 conda activate 601final
 
-python3 run_inference.py
+python3 transfer_train.py

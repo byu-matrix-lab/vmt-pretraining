@@ -19,22 +19,29 @@ def prep_model_inputs(include_video = True, **input_kwargs):
 def to_device(tensors):
     return [i.to(device) for i in tensors]
 
+def save_output(path, data):
+    with open(path, 'w') as f:
+        for line in data:
+            f.write(line + '\n')
+
 def run_inference(
     model,
     tokenizer,
     test_dataset,
     include_video = True,
-    batch_size = 20):
+    batch_size = 20,
+    save_path = None):
 
     model = model.to(device)
 
     dataloader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=pad_to_longest)
 
-    total_loss = 0
-    total_segs = 0
+    srcs = []
+    tgts = []
+    preds = []
     model.eval()
     with torch.no_grad():
-        val_bar = tqdm(dataloader)
+        val_bar = tqdm(dataloader, desc='Running test set')
         for data in val_bar:
             v, vm, s, sm, t, tm = to_device(data)
             
@@ -51,11 +58,17 @@ def run_inference(
 
             output_ids = model.generate(**model_inputs)
 
-            output = tokenizer.decode(output_ids.tolist())
-            print(output)
-            break
-            # val_bar.set_description(f'Testing Loss: {total_loss/total_segs:.4f}')
+            srcs += tokenizer.decode(s.tolist())
+            tgts += tokenizer.decode(t.tolist())
+            preds += tokenizer.decode(output_ids.tolist())
 
+    if save_path:
+        if not os.path.exists(save_path): os.makedirs(save_path)
+        save_output(save_path + 'srcs.txt', srcs)
+        save_output(save_path + 'tgts.txt', tgts)
+        save_output(save_path + 'preds.txt', preds)
+
+    return srcs, tgts, preds
 
 
 

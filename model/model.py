@@ -383,6 +383,14 @@ class BartEncoderLayer(nn.Module):
             dropout=config.attention_dropout,
         )
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
+
+        # TODO: modify the config to have this parameter
+        self.conformer = hasattr(config, 'encoder_conformer') and getattr(config, 'encoder_conformer')
+        if self.conformer:
+            self.conv_layer = Wav2Vec2ConformerConvolutionModule(config)
+            self.conv_layer_norm = nn.LayerNorm(self.embed_dim)
+
+
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
@@ -418,6 +426,13 @@ class BartEncoderLayer(nn.Module):
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
         hidden_states = residual + hidden_states
         hidden_states = self.self_attn_layer_norm(hidden_states)
+
+        if self.conformer:
+            residual = hidden_states
+            hidden_states = self.conv_layer(hidden_states)
+            hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
+            hidden_states = residual + hidden_states
+            hidden_states = self.conv_layer_norm(hidden_states)
 
         residual = hidden_states
         hidden_states = self.activation_fn(self.fc1(hidden_states))
@@ -729,65 +744,6 @@ class BartSuperEncoder(BartPretrainedModel):
             )
 
         return encoder_outputs
-
-class Wav2Vec2ConformerConvolutionModule(nn.Module):
-    """Convolution block used in the conformer block"""
-
-    def __init__(self, config):
-        super().__init__()
-        if (config.conv_depthwise_kernel_size - 1) % 2 == 1:
-            raise ValueError("`config.conv_depthwise_kernel_size` should be a odd number for 'SAME' padding")
-        self.layer_norm = nn.LayerNorm(config.hidden_size)
-        self.pointwise_conv1 = torch.nn.Conv1d(
-            config.hidden_size,
-            2 * config.hidden_size,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=False,
-        )
-        self.glu = torch.nn.GLU(dim=1)
-        self.depthwise_conv = torch.nn.Conv1d(
-            config.hidden_size,
-            config.hidden_size,
-            config.conv_depthwise_kernel_size,
-            stride=1,
-            padding=(config.conv_depthwise_kernel_size - 1) // 2,
-            groups=config.hidden_size,
-            bias=False,
-        )
-        self.batch_norm = torch.nn.BatchNorm1d(config.hidden_size)
-        self.activation = ACT2FN[config.hidden_act]
-        self.pointwise_conv2 = torch.nn.Conv1d(
-            config.hidden_size,
-            config.hidden_size,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=False,
-        )
-        self.dropout = torch.nn.Dropout(config.conformer_conv_dropout)
-
-    def forward(self, hidden_states):
-        hidden_states = self.layer_norm(hidden_states)
-        # exchange the temporal dimension and the feature dimension
-        hidden_states = hidden_states.transpose(1, 2)
-
-        # GLU mechanism
-        # => (batch, 2*channel, dim)
-        hidden_states = self.pointwise_conv1(hidden_states)
-        # => (batch, channel, dim)
-        hidden_states = self.glu(hidden_states)
-
-        # 1D Depthwise Conv
-        hidden_states = self.depthwise_conv(hidden_states)
-        hidden_states = self.batch_norm(hidden_states)
-        hidden_states = self.activation(hidden_states)
-
-        hidden_states = self.pointwise_conv2(hidden_states)
-        hidden_states = self.dropout(hidden_states)
-        hidden_states = hidden_states.transpose(1, 2)
-        return hidden_states
 
 
 class BartEncoder(BartPretrainedModel):

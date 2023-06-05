@@ -1,5 +1,6 @@
 from transformers import BartConfig # extend this
 import torch
+from torch import nn
 import sentencepiece as spm
 import sys
 sys.path.append('../model')
@@ -21,10 +22,9 @@ config = BartConfig(
                             encoder_input_dim = 0, # do nothing
 
                             video_encoder_layers = 6,
-                            video_encoder_conformer = True,
-                            conv_depthwise_kernel_size = 31,
-                            # video_encoder_input_dim = 768, # MAD
-                            video_encoder_input_dim = 1024, # VaTeX
+                            video_encoder_conformer = False,
+                            video_encoder_input_dim = 768, # MAD
+                            # video_encoder_input_dim = 1024, # VaTeX
 
                             decoder_layers = 6,
                             decoder_ffn_dim = 2048,
@@ -47,15 +47,20 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
+model.load_state_dict(torch.load('../../compute/models/tran-tran/run2'))
+
+# edit up projection layer for vatex shape
+model.model.encoder.video_encoder.project = nn.Linear(1024, 512)
+
 train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
 val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
 
 # train_dataset = MADDataset(['mad-train.txt'], tokenizer)
 # val_dataset = MADDataset(['mad-val.txt'], tokenizer)
 
-run_train(model, tokenizer, train_dataset, val_dataset)
+run_train(model, tokenizer, train_dataset, val_dataset, lr=5e-5)
 
-torch.save(model.state_dict(), '../../compute/models/con-tran/vatex-only')
+torch.save(model.state_dict(), '../../compute/models/tran-tran/run2-vatex')
 
 
         

@@ -17,4 +17,4 @@ module load miniconda3
 source ~/.bashrc
 conda activate 601final
 
-python3 run_train.py
+python3 transfer_train.py

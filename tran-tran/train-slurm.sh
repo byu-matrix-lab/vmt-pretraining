@@ -3,7 +3,7 @@
 #SBATCH --time=3-00:00:00   # walltime (3 days, the maximum)
 #SBATCH --ntasks=1   # number of processor cores (i.e. tasks)
 #SBATCH --nodes=1   # number of nodes
-#SBATCH --mem-per-cpu=200G   # RAM per CPU core
+#SBATCH --mem-per-cpu=128G   # RAM per CPU core
 #SBATCH -J "tran-tran"   # job name
 #SBATCH --gpus=1
 #SBATCH --qos=cs

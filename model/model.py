@@ -746,6 +746,27 @@ class BartSuperEncoder(BartPretrainedModel):
         return encoder_outputs
 
 
+class FeatureProjection(nn.Module):
+    def __init__(self, input_dim, output_dim, activation='swish'):
+        super(FeatureProjection, self).__init__()
+
+        actfn = ACT2FN[activation]
+
+        step_up = 4*input_dim
+
+        self.project = nn.Sequential(
+            nn.Linear(input_dim, step_up),
+            actfn,
+            nn.Linear(step_up, step_up),
+            actfn,
+            nn.Linear(step_up, output_dim)
+            # actfn,
+        )
+
+    def forward(self, x):
+        return self.project(x)
+
+
 class BartEncoder(BartPretrainedModel):
     """
     Transformer encoder consisting of *config.encoder_layers* self attention layers. Each layer is a
@@ -768,6 +789,7 @@ class BartEncoder(BartPretrainedModel):
         self.embed_scale = math.sqrt(embed_dim) if config.scale_embedding else 1.0
 
         if config.encoder_input_dim:
+            # self.project = FeatureProjection(config.encoder_input_dim, embed_dim)
             self.project = nn.Linear(config.encoder_input_dim, embed_dim)
         else:
             self.project = None
@@ -861,6 +883,7 @@ class BartEncoder(BartPretrainedModel):
             inputs_embeds = self.embed_tokens(input_ids) * self.embed_scale
         elif self.project is not None:
             inputs_embeds = self.project(inputs_embeds) # TODO: scale?
+            inputs_embeds = nn.functional.dropout(inputs_embeds, p=self.dropout, training=self.training)
 
         embed_pos = self.embed_positions(input)
         embed_pos = embed_pos.to(inputs_embeds.device)
@@ -1425,6 +1448,7 @@ class BartForConditionalGeneration(BartPretrainedModel):
 
         Returns:
         """
+
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if labels is not None:

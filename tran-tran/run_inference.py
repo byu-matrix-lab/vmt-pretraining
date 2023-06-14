@@ -46,7 +46,7 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-model.load_state_dict(torch.load('../../compute/models/none-tran/mask-60-end-vatex-only',map_location=torch.device('cpu')))
+model.load_state_dict(torch.load('../../compute/models/tran-tran/mask-60-end-vatex-only',map_location=torch.device('cpu')))
 
 test_dataset = VaTeXDataset(['mask_60_end_vatex_test.json'], tokenizer)
 
@@ -55,6 +55,6 @@ run_inference(
     tokenizer,
     test_dataset,
     include_video=False,
-    save_path = '../../compute/data/outputs/none-tran/mask-60-end-vatex-only/'
+    save_path = '../../compute/data/outputs/tran-tran/mask-60-end-vatex-only/'
 )
 

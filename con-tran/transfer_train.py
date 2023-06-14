@@ -48,17 +48,20 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-model.load_state_dict(torch.load('../../compute/models/con-tran/run1'))
+model.load_state_dict(torch.load('../../compute/models/con-tran/mask-60-end-mad-pretrain'))
 
 # edit up projection layer for vatex shape
 model.model.encoder.video_encoder.project = nn.Linear(1024, 512)
 
-train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
-val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
+train_dataset = VaTeXDataset(['mask_60_end_vatex_train.json'], tokenizer)
+val_dataset = VaTeXDataset(['mask_60_end_vatex_validation.json'], tokenizer)
+
+# train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
+# val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
 
 # train_dataset = MADDataset(['mad-train.txt'], tokenizer)
 # val_dataset = MADDataset(['mad-val.txt'], tokenizer)
 
 run_train(model, tokenizer, train_dataset, val_dataset, lr=5e-5)
 
-torch.save(model.state_dict(), '../../compute/models/con-tran/run1-vatex')
+torch.save(model.state_dict(), '../../compute/models/con-tran/mask-60-end-vatex-finetune')

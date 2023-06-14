@@ -13,6 +13,10 @@ from train import run_train
 # mad/vatex, con/tran/none, lr, prefix, source_model
 print(sys.argv)
 _, dataset, model_type, lr, prefix, source_model = sys.argv
+
+if source_model == 'true': # true / false
+    source_model = f'../../compute/models/text_only_finetune/{model_type}/{prefix}mad_only'
+else: source_model = ''
 lr = float(lr)
 
 tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh.model')
@@ -67,11 +71,12 @@ else:
     train_dataset = VaTeXDataset([f'{prefix}vatex_train.json'], tokenizer)
     val_dataset = VaTeXDataset([f'{prefix}vatex_validation.json'], tokenizer)
 
-include_video = (model_type != 'none-tran')
+include_video = (model_type != 'none_tran' and dataset != 'mad') # remove this
+print('Including video', include_video)
 run_train(model, tokenizer, train_dataset, val_dataset, lr=lr, include_video=include_video)
 
 model_suffix = 'finetune' if source_model else 'only'
-torch.save(model.state_dict(), f'../../compute/models/{model_type}/{prefix}{dataset}_{model_suffix}')
+torch.save(model.state_dict(), f'../../compute/models/text_only_finetune/{model_type}/{prefix}{dataset}_{model_suffix}')
 
 
         

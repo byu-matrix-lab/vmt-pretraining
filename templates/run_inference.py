@@ -9,7 +9,6 @@ from dataset import VaTeXDataset, MADDataset
 from inference import run_inference
 
 # con_tran "" ""
-# mad/vatex, con/tran/none, lr, prefix, source_model
 _, model_type, prefix, suffix = sys.argv
 print(sys.argv)
 
@@ -51,7 +50,7 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-model.load_state_dict(torch.load(f'../../compute/models/{model_type}/{prefix}vatex_{suffix}',map_location=torch.device('cpu')))
+model.load_state_dict(torch.load(f'../../compute/models/text_only_finetune/{model_type}/{prefix}vatex_{suffix}',map_location=torch.device('cpu')))
 
 test_dataset = VaTeXDataset([f'{prefix}vatex_test.json'], tokenizer)
 
@@ -60,6 +59,6 @@ run_inference(
     tokenizer,
     test_dataset,
     include_video=(model_type != 'none_tran'),
-    save_path = f'../../compute/data/outputs/{model_type}/{prefix}vatex_{suffix}/'
+    save_path = f'../../compute/data/outputs/text_only_finetune/{model_type}/{prefix}vatex_{suffix}/'
 )
 

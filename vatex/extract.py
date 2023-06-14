@@ -1,11 +1,11 @@
 import os
 import json
 
-data_folder = '../../compute/vatex_baseline/Video-guided-Machine-Translation/results/masked1/'
+data_folder = '../../compute/vatex_baseline/Video-guided-Machine-Translation/results/mask_30_rand/'
 
 outputf = data_folder + 'submission.json'
 
-compf = '../../compute/vatex_baseline/Video-guided-Machine-Translation/data/mask_vatex_test.json'
+compf = '../../compute/vatex_baseline/Video-guided-Machine-Translation/data/mask_30_rand_vatex_test.json'
 
 with open(outputf, 'r') as file:
     data = json.load(file)

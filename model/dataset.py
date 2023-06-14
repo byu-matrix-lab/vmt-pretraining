@@ -89,6 +89,8 @@ class MADDataset(Dataset):
           start_time, end_time = map(lambda x: int(5*x), label_data['ext_timestamps'])
           movie_features = movie_data[label_data['movie']][start_time:end_time]
 
+          # movie_features = movie_features[::5] # subsample, 1 per second
+
           en = label_data['en_sentence']
           zh = label_data['zh_sentence']
 
@@ -118,12 +120,13 @@ class VaTeXDataset(Dataset):
     for file in files:
       with open(file, 'r') as labels:
         raw_data = json.load(labels)
-        for line in tqdm(raw_data, desc='Loading json file'):
+        for line in tqdm(raw_data, desc=f'Loading file {file}'):
           videoid = line['videoID']
           
           video_feats = np.load(video_path + videoid + '.npy')[0]
 
-          video_feats = video_feats[::5]
+          video_feats = video_feats[::4]
+          # video_feats = video_feats[::20]
 
           en = line['enCap'][-5:]
           zh = line['chCap'][-5:]

@@ -40,22 +40,29 @@ config = BartConfig(
                             classifier_dropout = 0.0,
                             scale_embedding = True,
                             is_encoder_decoder = True,
-                            pad_token_id = 0, # TODO: do these need to be in a different format???
+                            pad_token_id = 0,
                             bos_token_id = 2,
                             eos_token_id = 3,
                             )
 
 model = BartForConditionalGeneration(config)
 
-train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
-val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
+# train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
+# val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
+
+train_dataset = VaTeXDataset(['mask_60_end_vatex_train.json'], tokenizer)
+# train_dataset = VaTeXDataset(['mask_60_end_vatex_validation.json'], tokenizer)
+val_dataset = VaTeXDataset(['mask_60_end_vatex_validation.json'], tokenizer)
 
 # train_dataset = MADDataset(['mad-train.txt'], tokenizer)
 # val_dataset = MADDataset(['mad-val.txt'], tokenizer)
 
+# val_dataset = MADDataset(['mask_60_end_mad_val.txt'], tokenizer)
+# train_dataset = MADDataset(['mask_60_end_mad_train.txt'], tokenizer)
+
 run_train(model, tokenizer, train_dataset, val_dataset)
 
-torch.save(model.state_dict(), '../../compute/models/con-tran/vatex-only')
+torch.save(model.state_dict(), '../../compute/models/con-tran/vatex-only-inc5')
 
 
         

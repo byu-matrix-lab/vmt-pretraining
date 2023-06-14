@@ -8,7 +8,7 @@ from model import BartForConditionalGeneration
 from dataset import VaTeXDataset, MADDataset
 from inference import run_inference
 
-tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh.model')
+tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh-backup.model')
 
 config = BartConfig(
                             vocab_size = tokenizer.vocab_size(),
@@ -21,7 +21,8 @@ config = BartConfig(
                             encoder_input_dim = 0, # do nothing
 
                             video_encoder_layers = 6,
-                            video_encoder_conformer = False,
+                            video_encoder_conformer = True,
+                            conv_depthwise_kernel_size = 31,
                             # video_encoder_input_dim = 768, # MAD
                             video_encoder_input_dim = 1024, # VaTeX
 
@@ -46,7 +47,7 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-model.load_state_dict(torch.load('../../compute/models/none-tran/mask-60-end-vatex-only',map_location=torch.device('cpu')))
+model.load_state_dict(torch.load('../../compute/models/con-tran/mask-60-end-vatex-only',map_location=torch.device('cpu')))
 
 test_dataset = VaTeXDataset(['mask_60_end_vatex_test.json'], tokenizer)
 
@@ -54,7 +55,6 @@ run_inference(
     model,
     tokenizer,
     test_dataset,
-    include_video=False,
-    save_path = '../../compute/data/outputs/none-tran/mask-60-end-vatex-only/'
+    save_path = '../../compute/data/outputs/con-tran/mask-60-end-vatex-only/'
 )
 

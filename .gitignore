@@ -2,3 +2,4 @@
 **/__pycache__
 comet-env
 **/slurm*
+**/jobs

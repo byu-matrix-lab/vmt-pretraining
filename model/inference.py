@@ -64,9 +64,12 @@ def run_inference(
 
     if save_path:
         if not os.path.exists(save_path): os.makedirs(save_path)
-        save_output(save_path + 'srcs.txt', srcs)
-        save_output(save_path + 'tgts.txt', tgts)
-        save_output(save_path + 'preds.txt', preds)
+        # save_output(save_path + 'srcs.txt', srcs)
+        # save_output(save_path + 'tgts.txt', tgts)
+        # save_output(save_path + 'preds.txt', preds)
+        save_output(save_path + 'val_srcs.txt', srcs)
+        save_output(save_path + 'val_tgts.txt', tgts)
+        save_output(save_path + 'val_preds.txt', preds)
 
     return srcs, tgts, preds
 

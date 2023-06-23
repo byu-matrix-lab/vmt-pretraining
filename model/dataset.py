@@ -43,16 +43,21 @@ def pad_to_longest(batch):
   videos, src, tgt = zip(*batch)
 
   # pad videos
-  vid_lens = [len(v) for v in videos]
-  pad_len = max(vid_lens)
-  vid_mask = generate_mask(pad_len, vid_lens)
-  pad_videos = []
-  emb_size = len(videos[0][0])
-  for v in videos:
-    v = v.tolist()
-    if len(v) < pad_len: # pad with zeros
-      v += [[0] * emb_size] * (pad_len - len(v)) # careful of correferences
-    pad_videos.append(v)
+  if videos[0] is None:
+    pad_videos = None
+    vid_mask = None
+  else:
+    vid_lens = [len(v) for v in videos]
+    pad_len = max(vid_lens)
+    vid_mask = generate_mask(pad_len, vid_lens)
+    pad_videos = []
+    emb_size = len(videos[0][0])
+    for v in videos:
+      v = v.tolist()
+      if len(v) < pad_len: # pad with zeros
+        v += [[0] * emb_size] * (pad_len - len(v)) # careful of correferences
+      pad_videos.append(v)
+    pad_videos = torch.tensor(pad_videos)
 
   src_lens = [len(s) for s in src]
   pad_len = max(src_lens)
@@ -64,7 +69,6 @@ def pad_to_longest(batch):
   tgt_mask = generate_mask(pad_len, tgt_lens)
   pad_tgt = [s + [PAD] * (pad_len - len(s)) for s in tgt]
 
-  pad_videos = torch.tensor(pad_videos)
   pad_src = torch.tensor(pad_src)
   pad_tgt = torch.tensor(pad_tgt)
 
@@ -151,3 +155,42 @@ class VaTeXDataset(Dataset):
   def __len__(self):
     return len(self.data)
 
+
+class OpusDataset(Dataset):
+  def __init__(self, files, tokenizer, train=True):
+    files = [DATA_DIR + 'opus/' + f for f in files]
+
+    self.data = []
+
+
+    for file in files:
+      with open(file, 'r') as labels:
+        queue = []
+        def flush():
+          nonlocal queue
+          ens, zhs = zip(*queue)
+
+          ens = [[tokenizer.bos_id()] + sent + [tokenizer.eos_id()] for sent in tokenizer.encode(list(ens))]
+          zhs = [[tokenizer.bos_id()] + sent + [tokenizer.eos_id()] for sent in tokenizer.encode(list(zhs))]
+
+          for en, zh in zip(ens, zhs):
+            if len(en) <= MAX_TEXT_LEN and len(zh) <= MAX_TEXT_LEN:
+              self.data.append((en, zh))
+
+          queue = []
+
+        for line in tqdm(labels, desc=f'Loading file {file}'):
+          en, zh = line.strip('\n').split('\t')
+
+          queue.append((en, zh))
+          if len(queue) == 100: flush()
+        if queue: flush()
+
+
+
+  def __getitem__(self, i):
+    en, zh = self.data[i]
+    return None, en, zh
+  
+  def __len__(self):
+    return len(self.data)

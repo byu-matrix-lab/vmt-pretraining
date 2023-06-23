@@ -9,6 +9,16 @@ from model import BartForConditionalGeneration
 from dataset import VaTeXDataset, MADDataset
 from train import run_train
 
+# mad con_tran 1e-4 "" ""
+# mad/vatex, con/tran/none, lr, prefix, source_model
+print(sys.argv)
+_, dataset, model_type, lr, prefix, source_model = sys.argv
+
+if source_model == 'true': # true / false
+    source_model = f'../../compute/models/text_only_finetune/{model_type}/{prefix}mad_only'
+else: source_model = ''
+lr = float(lr)
+
 tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh.model')
 
 config = BartConfig(
@@ -22,9 +32,9 @@ config = BartConfig(
                             encoder_input_dim = 0, # do nothing
 
                             video_encoder_layers = 6,
-                            video_encoder_conformer = False,
-                            video_encoder_input_dim = 768, # MAD
-                            # video_encoder_input_dim = 1024, # VaTeX
+                            video_encoder_conformer = (model_type == 'con_tran'),
+                            conv_depthwise_kernel_size = 31,
+                            video_encoder_input_dim = (768 if ('mad' in source_model if source_model else dataset == 'mad') else 1024), # MAD / VaTeX
 
                             decoder_layers = 6,
                             decoder_ffn_dim = 2048,
@@ -40,30 +50,33 @@ config = BartConfig(
                             classifier_dropout = 0.0,
                             scale_embedding = True,
                             is_encoder_decoder = True,
-                            pad_token_id = 0, # TODO: do these need to be in a different format???
+                            pad_token_id = 0,
                             bos_token_id = 2,
                             eos_token_id = 3,
                             )
 
 model = BartForConditionalGeneration(config)
 
-model.load_state_dict(torch.load('../../compute/models/tran-tran/mask-60-end-mad-pretrain'))
+if source_model:
+    model.load_state_dict(torch.load(source_model))
 
-# edit up projection layer for vatex shape
-model.model.encoder.video_encoder.project = nn.Linear(1024, 512)
+    # edit up projection layer for vatex shape
+    if ('mad' == dataset) != ('mad' in source_model):
+        model.model.encoder.video_encoder.project = nn.Linear((768 if dataset == 'mad' else 1024), 512)
 
-train_dataset = VaTeXDataset(['mask_60_end_vatex_train.json'], tokenizer)
-val_dataset = VaTeXDataset(['mask_60_end_vatex_validation.json'], tokenizer)
+if dataset == 'mad':
+    val_dataset = MADDataset([f'{prefix}mad_val.txt'], tokenizer)
+    train_dataset = MADDataset([f'{prefix}mad_train.txt'], tokenizer)
+else:
+    train_dataset = VaTeXDataset([f'{prefix}vatex_train.json'], tokenizer)
+    val_dataset = VaTeXDataset([f'{prefix}vatex_validation.json'], tokenizer)
 
-# train_dataset = VaTeXDataset(['vatex_training_v1.0.json'], tokenizer)
-# val_dataset = VaTeXDataset(['new_vatex_validation.json'], tokenizer)
+include_video = (model_type != 'none_tran' and dataset != 'mad')
+print('Including video', include_video)
+run_train(model, tokenizer, train_dataset, val_dataset, lr=lr, include_video=include_video)
 
-# train_dataset = MADDataset(['mad-train.txt'], tokenizer)
-# val_dataset = MADDataset(['mad-val.txt'], tokenizer)
-
-run_train(model, tokenizer, train_dataset, val_dataset, lr=5e-5)
-
-torch.save(model.state_dict(), '../../compute/models/tran-tran/mask-60-end-vatex-finetune')
+model_suffix = 'finetune' if source_model else 'only'
+torch.save(model.state_dict(), f'../../compute/models/text_only_finetune/{model_type}/{prefix}{dataset}_{model_suffix}')
 
 
         

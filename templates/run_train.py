@@ -6,7 +6,7 @@ import sys
 sys.path.append('../model')
 
 from model import BartForConditionalGeneration
-from dataset import VaTeXDataset, MADDataset
+from dataset import VaTeXDataset, MADDataset, OpusDataset
 from train import run_train
 
 # mad con_tran 1e-4 "" ""
@@ -14,9 +14,11 @@ from train import run_train
 print(sys.argv)
 _, dataset, model_type, lr, prefix, source_model = sys.argv
 
-if source_model == 'true': # true / false
-    source_model = f'../../compute/models/text_only_finetune/{model_type}/{prefix}mad_only'
-else: source_model = ''
+if source_model != 'false': # true / false
+    source_model_path = f'../../compute/models/{model_type}/{prefix}{source_model}_only'
+else: 
+    source_model_path = ''
+    source_model = ''
 lr = float(lr)
 
 tokenizer = spm.SentencePieceProcessor(model_file='../../compute/data/tokenizing/en-and-zh.model')
@@ -57,8 +59,8 @@ config = BartConfig(
 
 model = BartForConditionalGeneration(config)
 
-if source_model:
-    model.load_state_dict(torch.load(source_model))
+if source_model_path:
+    model.load_state_dict(torch.load(source_model_path))
 
     # edit up projection layer for vatex shape
     if ('mad' == dataset) != ('mad' in source_model):
@@ -67,16 +69,22 @@ if source_model:
 if dataset == 'mad':
     val_dataset = MADDataset([f'{prefix}mad_val.txt'], tokenizer)
     train_dataset = MADDataset([f'{prefix}mad_train.txt'], tokenizer)
-else:
+elif dataset == 'vatex':
     train_dataset = VaTeXDataset([f'{prefix}vatex_train.json'], tokenizer)
     val_dataset = VaTeXDataset([f'{prefix}vatex_validation.json'], tokenizer)
+else:
+    train_dataset = OpusDataset(['OpenSubtitles/train.tsv'], tokenizer)
+    val_dataset = OpusDataset(['OpenSubtitles/val.tsv'], tokenizer)
 
-include_video = (model_type != 'none_tran' and dataset != 'mad') # remove this
+include_video = (model_type != 'none_tran')
 print('Including video', include_video)
-run_train(model, tokenizer, train_dataset, val_dataset, lr=lr, include_video=include_video)
 
-model_suffix = 'finetune' if source_model else 'only'
-torch.save(model.state_dict(), f'../../compute/models/text_only_finetune/{model_type}/{prefix}{dataset}_{model_suffix}')
+model_suffix = f'finetune_{source_model}' if source_model else 'only'
+save_path = f'../../compute/models/{model_type}/{prefix}{dataset}_{model_suffix}'
+
+run_train(model, tokenizer, train_dataset, val_dataset, lr=lr, include_video=include_video, save_path=save_path)
+
+torch.save(model.state_dict(), save_path)
 
 
         

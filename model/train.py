@@ -19,7 +19,7 @@ def prep_model_inputs(include_video = True, **input_kwargs):
     return input_kwargs
 
 def to_device(tensors):
-    return [i.to(device) for i in tensors]
+    return [(None if i is None else i.to(device)) for i in tensors]
 
 def run_train(
     model,
@@ -30,7 +30,8 @@ def run_train(
     batch_size = 32,
     val_every = 1,
     early_stop = 5,
-    lr = 1e-4):
+    lr = 1e-4,
+    save_path=None):
 
     model = model.to(device)
 
@@ -53,6 +54,7 @@ def run_train(
         total_segs = 0
         train_bar = tqdm(train_dataloader)
         for data in train_bar:
+
             v, vm, s, sm, t, tm = to_device(data)
             
             model_inputs = prep_model_inputs(
@@ -68,7 +70,7 @@ def run_train(
 
             loss = outputs.loss
             total_loss += loss.item()
-            total_segs += v.size(0) / batch_size
+            total_segs += s.size(0) / batch_size
 
             loss.backward()
             optimizer.step()
@@ -98,6 +100,7 @@ def run_train(
                     # outputs = model(**model_inputs)
                     # loss = outputs.loss
                     # total_loss -= loss.item()
+
                     model_inputs = prep_model_inputs(
                         include_video,
                         input_ids=s,
@@ -114,16 +117,20 @@ def run_train(
                     refs = tokenizer.decode(t.tolist())
                     if output_pair is None: output_pair = (refs[0], outputs[0])
                     total_loss += corpus_chrf(outputs, refs)
+
                     total_segs += s.shape[0]/batch_size
                     val_bar.set_description(f'Val Epoch: {epoch} Score: {total_loss/total_segs:.4f}')
             if output_pair is not None: print('Example translation:',*output_pair, sep=' -> ')
             cur_score = total_loss / total_segs
 
             if cur_score > best_score:
-                print(f'Saving model weights {cur_score:.4f} > {best_score:.4f}')
+                print(f'Saving {epoch}  model weights {cur_score:.4f} > {best_score:.4f}')
                 early_stop_c = 0
                 best_score = cur_score
                 best_model = copy.deepcopy(model.state_dict())
+                if save_path is not None:
+                    print(f'Saving weights to file {save_path}')
+                    torch.save(model.state_dict(), save_path)
             else:
                 early_stop_c += 1
                 if early_stop_c >= early_stop and best_score > -math.inf:

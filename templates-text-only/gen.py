@@ -26,15 +26,7 @@ def write_template(path, temp, args):
 dataset = 'mad'
 for model_type in ['con_tran', 'none_tran', 'tran_tran']:
     for prefix in data_groups:
-        # if '15' not in prefix and 'none' not in model_type: continue # remove this
-        path = f'train-{dataset}/{prefix}{model_type}.sh'
-        args = f'{dataset} {model_type} 1e-4 "{prefix}" false'
-        write_template(path, train_temp, args)
-
-dataset = 'opus'
-for model_type in ['con_tran', 'none_tran', 'tran_tran']:
-    for prefix in data_groups:
-        # if '15' not in prefix and 'none' not in model_type: continue # remove this
+        if '15' not in prefix and 'none' not in model_type: continue # remove this
         path = f'train-{dataset}/{prefix}{model_type}.sh'
         args = f'{dataset} {model_type} 1e-4 "{prefix}" false'
         write_template(path, train_temp, args)
@@ -42,19 +34,19 @@ for model_type in ['con_tran', 'none_tran', 'tran_tran']:
 dataset = 'vatex'
 for model_type in ['con_tran', 'none_tran', 'tran_tran']:
     for prefix in data_groups:
-        # if '15' not in prefix and 'none' not in model_type: continue # remove this
+        if '15' not in prefix and 'none' not in model_type: continue # remove this
         # training
         path = f'train-{dataset}/{prefix}{model_type}.sh'
         args = f'{dataset} {model_type} 1e-4 "{prefix}" false'
         write_template(path, train_temp, args)
 
         path = f'finetune-{dataset}/{prefix}{model_type}.sh'
-        args = f'{dataset} {model_type} 5e-5 "{prefix}" opus' # previously mad
+        args = f'{dataset} {model_type} 5e-5 "{prefix}" true'
         write_template(path, train_temp, args)
 
         # inference
-        path = f'eval/{prefix}{model_type}_finetune_opus.sh'
-        args = f'{model_type} "{prefix}" finetune_opus'
+        path = f'eval/{prefix}{model_type}_finetune.sh'
+        args = f'{model_type} "{prefix}" finetune'
         write_template(path, inf_temp, args)
 
         path = f'eval/{prefix}{model_type}_only.sh'

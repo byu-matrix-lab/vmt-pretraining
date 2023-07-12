@@ -1,0 +1,1 @@
+cat data/download.sh | xargs -P20 -L1 sh -c

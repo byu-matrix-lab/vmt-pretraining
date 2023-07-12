@@ -3,3 +3,5 @@
 comet-env
 **/slurm*
 **/jobs
+**/data
+

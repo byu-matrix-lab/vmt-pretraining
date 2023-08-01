@@ -112,6 +112,46 @@ class MADDataset(Dataset):
   def __len__(self):
     return len(self.data)
 
+
+class VaTeXCLIPDataset(Dataset):
+  def __init__(self, files, tokenizer, train=True):
+    files = [DATA_DIR + 'vatex/' + f for f in files]
+
+    # video_path = DATA_DIR + 'vatex/' + ('val/' if train else 'private_test/')
+    video_path = DATA_DIR + 'vatex/val/'
+
+    self.data = []
+
+    with h5py.File(DATA_DIR + 'mad/CLIP_L14_frames_features_5fps.h5', 'r') as all_clips:
+      for file in files:
+        with open(file, 'r') as labels:
+          raw_data = json.load(labels)
+          for line in tqdm(raw_data, desc=f'Loading file {file}'):
+            videoid = line['videoID'][:-14]
+            
+            video_feats = all_clips[videoid][:]
+
+            en = line['enCap'][-5:]
+            zh = line['chCap'][-5:]
+
+            en = [[tokenizer.bos_id()] + sent + [tokenizer.eos_id()] for sent in tokenizer.encode(en)]
+            zh = [[tokenizer.bos_id()] + sent + [tokenizer.eos_id()] for sent in tokenizer.encode(zh)]
+
+            pairs = list(zip(en, zh))
+
+            for en, zh in pairs:
+              if 0 < len(video_feats) <= MAX_VIDEO_LEN and len(en) <= MAX_TEXT_LEN and len(zh) <= MAX_TEXT_LEN:
+                self.data.append((video_feats, [(en, zh)]))
+
+  def __getitem__(self, i):
+    video, pairs = self.data[i]
+    en, zh = random.choice(pairs)
+    return video, en, zh
+  
+  def __len__(self):
+    return len(self.data)
+
+
 class VaTeXDataset(Dataset):
   def __init__(self, files, tokenizer, train=True):
     files = [DATA_DIR + 'vatex/' + f for f in files]

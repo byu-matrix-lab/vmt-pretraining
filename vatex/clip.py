@@ -3,9 +3,9 @@ import torch
 import torchvision
 torchvision.set_video_backend("video_reader")
 
-from transformers import CLIPProcessor, CLIPModel
 import h5py
 from tqdm import tqdm
+from transformers import CLIPProcessor, CLIPModel
 
 model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
@@ -25,7 +25,7 @@ for video_file in tqdm(os.listdir('data/raw'), desc='Computing CLIP embeddings')
         if len(frames) <= int(cur_time*5):
             frames.append(cur_frame)
     
-    inputs = processor(text=[''], images=frames, return_tensors="pt", padding=True)
+    inputs = processor(text=['a photo of a cat', 'a man runs a race'], images=frames, return_tensors="pt", padding=True)
 
     with torch.no_grad():
         outputs = model(**inputs)

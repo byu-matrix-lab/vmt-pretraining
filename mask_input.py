@@ -49,9 +49,15 @@ def mask_mad(input, output):
             file.write('\n')
 
 
-mask_mad('mad_train.txt', f'mask_{MASK_PER}_{MASK_TYPE}_mad_train.txt')
-mask_mad('mad_val.txt', f'mask_{MASK_PER}_{MASK_TYPE}_mad_val.txt')
+#mask_mad('mad_train.txt', f'mask_{MASK_PER}_{MASK_TYPE}_mad_train.txt')
+#mask_mad('mad_val.txt', f'mask_{MASK_PER}_{MASK_TYPE}_mad_val.txt')
 
-mask_vatex('vatex_train.json', f'mask_{MASK_PER}_{MASK_TYPE}_vatex_train.json')
-mask_vatex('vatex_validation.json', f'mask_{MASK_PER}_{MASK_TYPE}_vatex_validation.json')
-mask_vatex('vatex_test.json', f'mask_{MASK_PER}_{MASK_TYPE}_vatex_test.json')
+#mask_vatex('vatex_train.json', f'mask_{MASK_PER}_{MASK_TYPE}_vatex_train.json')
+#mask_vatex('vatex_validation.json', f'mask_{MASK_PER}_{MASK_TYPE}_vatex_validation.json')
+#mask_vatex('vatex_test.json', f'mask_{MASK_PER}_{MASK_TYPE}_vatex_test.json')
+
+for MASK_PER in [15, 30, 60]:
+    for MASK_TYPE in ['rand', 'end']:
+        mask_vatex('clip_vatex_train.json', f'mask_{MASK_PER}_{MASK_TYPE}_clip_vatex_train.json')
+        mask_vatex('clip_vatex_validation.json', f'mask_{MASK_PER}_{MASK_TYPE}_clip_vatex_validation.json')
+        mask_vatex('clip_vatex_test.json', f'mask_{MASK_PER}_{MASK_TYPE}_clip_vatex_test.json')

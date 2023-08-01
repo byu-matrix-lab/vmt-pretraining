@@ -13,10 +13,22 @@ export OMP_NUM_THREADS=$SLURM_CPUS_ON_NODE
 # LOAD MODULES, INSERT CODE, AND RUN YOUR PROGRAMS HERE
 module load miniconda3
 source ~/.bashrc
-conda activate vmt
+conda activate 601final
 
 
+echo Running comet compare on 15% masked
+comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
+-t  ../compute/vatex_baseline/Video-guided-Machine-Translation/results/mask_15_end/preds.txt  ../compute/data/outputs/*_*/mask_15_end_vatex_*/preds.txt \
+-r ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt \
+--model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
+> ../compute/data/outputs/comet_compare_15_mask_end.txt
 
+echo Running comet compare on 15% masked
+comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
+-t  ../compute/vatex_baseline/Video-guided-Machine-Translation/results/mask_15_rand/preds.txt  ../compute/data/outputs/*_*/mask_15_rand_vatex_*/preds.txt \
+-r ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt \
+--model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
+> ../compute/data/outputs/comet_compare_15_mask_rand.txt
 
 # echo Running comet compare on pretraining with video vs not video
 # comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
@@ -25,20 +37,20 @@ conda activate vmt
 # --model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
 # > ../compute/data/outputs/comet_compare_no_mask.txt
 
-echo Running comet compare on 60% masked
-comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
--t  ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/preds.txt  ../compute/data/outputs/text_only_finetune/tran_tran/mask_60_end_vatex_finetune/preds.txt ../compute/data/outputs/tran_tran/mask_60_end_vatex_finetune/preds.txt \
--r ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt \
---model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
-> ../compute/data/outputs/comet_compare_60end_tran_tran.txt
+# echo Running comet compare on 60% masked
+# comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
+# -t  ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/preds.txt  ../compute/data/outputs/text_only_finetune/tran_tran/mask_60_end_vatex_finetune/preds.txt ../compute/data/outputs/tran_tran/mask_60_end_vatex_finetune/preds.txt \
+# -r ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt \
+# --model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
+# > ../compute/data/outputs/comet_compare_60end_tran_tran.txt
 
 # COMET no mask
-echo Running comet on non-masked results
-comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
--t ../compute/data/outputs/con_tran/vatex_finetune/preds.txt ../compute/data/outputs/none_tran/vatex_finetune/preds.txt ../compute/data/outputs/tran_tran/vatex_finetune/preds.txt ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/preds.txt ../compute/data/outputs/con_tran/vatex_only/preds.txt ../compute/data/outputs/none_tran/vatex_only/preds.txt ../compute/data/outputs/tran_tran/vatex_only/preds.txt ../compute/data/outputs/con_tran/vatex_finetune_opus/preds.txt ../compute/data/outputs/none_tran/vatex_finetune_opus/preds.txt ../compute/data/outputs/tran_tran/vatex_finetune_opus/preds.txt \
--r ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt \
---model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
-> ../compute/data/outputs/comet_compare_no_mask.txt
+# echo Running comet on non-masked results
+# comet-compare -s ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt \
+# -t ../compute/data/outputs/con_tran/vatex_finetune/preds.txt ../compute/data/outputs/none_tran/vatex_finetune/preds.txt ../compute/data/outputs/tran_tran/vatex_finetune/preds.txt ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/preds.txt ../compute/data/outputs/con_tran/vatex_only/preds.txt ../compute/data/outputs/none_tran/vatex_only/preds.txt ../compute/data/outputs/tran_tran/vatex_only/preds.txt ../compute/data/outputs/con_tran/vatex_finetune_opus/preds.txt ../compute/data/outputs/none_tran/vatex_finetune_opus/preds.txt ../compute/data/outputs/tran_tran/vatex_finetune_opus/preds.txt \
+# -r ../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt \
+# --model ../compute/comet/wmt22-comet-da/checkpoints/model.ckpt \
+# > ../compute/data/outputs/comet_compare_no_mask.txt
 
 # # COMET 30% mask
 # # TODO: Replace the vatex baseline with a masked version

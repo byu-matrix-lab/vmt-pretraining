@@ -117,12 +117,8 @@ class VaTeXCLIPDataset(Dataset):
   def __init__(self, files, tokenizer, train=True):
     files = [DATA_DIR + 'vatex/' + f for f in files]
 
-    # video_path = DATA_DIR + 'vatex/' + ('val/' if train else 'private_test/')
-    video_path = DATA_DIR + 'vatex/val/'
-
     self.data = []
-
-    with h5py.File(DATA_DIR + 'mad/CLIP_L14_frames_features_5fps.h5', 'r') as all_clips:
+    with h5py.File(DATA_DIR + 'vatex/dataset.h5', 'r') as all_clips:
       for file in files:
         with open(file, 'r') as labels:
           raw_data = json.load(labels)

@@ -1,3 +1,7 @@
 **/past_runs
 **/__pycache__
 comet-env
+**/slurm*
+**/jobs
+**/data
+

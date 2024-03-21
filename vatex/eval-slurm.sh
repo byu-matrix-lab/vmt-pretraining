@@ -17,6 +17,7 @@
 
 source ~/fsl_groups/grp_mtlab/compute/environments/onmt/bin/activate
 
+output_path=../../compute/data/outputs/none-tran/vatex-finetune/
 
 sacrebleu ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/masked1/tgt.txt -i ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/masked1/preds.txt -m bleu chrf ter > ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/masked1/metrics.txt --tokenize zh
 # comet-score -s ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/src.txt -t ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/preds.txt -r ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/tgt.txt --gpus 0 --quiet > ../../compute/vatex_baseline/Video-guided-Machine-Translation/results/testset/comet_metrics.txt
